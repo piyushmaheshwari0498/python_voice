@@ -3,12 +3,16 @@ import sys
 from pyannote.audio import Pipeline
 from pydub import AudioSegment
 
-# Check for audio file argument
+# Ensure audio file is provided as argument
 if len(sys.argv) < 2:
     print("Please provide an input audio file as argument")
     sys.exit(1)
 
 audio_file = sys.argv[1]
+
+if not os.path.exists(audio_file):
+    print(f"File {audio_file} does not exist")
+    sys.exit(1)
 
 # Load HF token from environment variable
 pipeline = Pipeline.from_pretrained(
@@ -21,7 +25,7 @@ diarization = pipeline(audio_file)
 print("Diarization completed!")
 
 # Load the audio file
-audio = AudioSegment.from_wav(audio_file)
+audio = AudioSegment.from_file(audio_file)
 
 # Separate speakers into individual segments
 speaker_segments = {}
