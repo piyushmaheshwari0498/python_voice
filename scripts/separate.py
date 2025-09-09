@@ -31,16 +31,20 @@ for turn, _, speaker in diarization.itertracks(yield_label=True):
     else:
         speaker_segments[speaker] += segment
 
+# Create output folder
+output_dir = "output"
+os.makedirs(output_dir, exist_ok=True)
+
 # Identify "mom" as the speaker with the longest total duration
 mom_speaker = max(speaker_segments, key=lambda s: len(speaker_segments[s]))
-mom_filename = "mom.wav"
+mom_filename = os.path.join(output_dir, "mom.wav")
 speaker_segments[mom_speaker].export(mom_filename, format="wav")
 print(f"Saved mom's voice as {mom_filename}")
 
 # Export other speakers
 for speaker, segment in speaker_segments.items():
     if speaker != mom_speaker:
-        filename = f"{speaker}.wav"
+        filename = os.path.join(output_dir, f"{speaker}.wav")
         segment.export(filename, format="wav")
         print(f"Saved {filename}")
 

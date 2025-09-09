@@ -41,6 +41,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: separated-audio
-          path: |
-            scripts/mom.wav
-            scripts/*.wav
+          path: output/
