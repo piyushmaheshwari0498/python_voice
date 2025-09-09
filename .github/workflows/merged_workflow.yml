@@ -22,13 +22,19 @@ jobs:
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
-      - name: Install dependencies
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libsndfile1
+
+      - name: Install Python dependencies
         run: pip install -r requirements.txt
 
       - name: Run speaker separation
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}   # Hugging Face token
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          echo "Running speaker separation..."
           python scripts/separate.py scripts/conversation_fixed.wav
 
       - name: Upload output audio files
@@ -36,5 +42,5 @@ jobs:
         with:
           name: separated-audio
           path: |
-            mom.wav
-            *.wav
+            scripts/mom.wav
+            scripts/*.wav
