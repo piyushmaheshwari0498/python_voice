@@ -1,6 +1,18 @@
 import os
+import sys
 from pyannote.audio import Pipeline
 from pydub import AudioSegment
+
+# Get audio file from command line argument
+if len(sys.argv) < 2:
+    print("Please provide an input audio file as argument")
+    sys.exit(1)
+
+audio_file = sys.argv[1]
+
+if not os.path.exists(audio_file):
+    print(f"Error: File {audio_file} does not exist")
+    sys.exit(1)
 
 # Load HF token from environment variable
 pipeline = Pipeline.from_pretrained(
@@ -8,14 +20,12 @@ pipeline = Pipeline.from_pretrained(
     use_auth_token=os.environ.get("HF_TOKEN")
 )
 
-audio_file = "conversation_fixed.wav"
-
 print("Running speaker diarization, please wait...")
 diarization = pipeline(audio_file)
 print("Diarization completed!")
 
 # Load the audio file
-audio = AudioSegment.from_wav(audio_file)
+audio = AudioSegment.from_file(audio_file)
 
 # Separate speakers into individual segments
 speaker_segments = {}
@@ -35,7 +45,7 @@ mom_filename = "mom.wav"
 speaker_segments[mom_speaker].export(mom_filename, format="wav")
 print(f"Saved mom's voice as {mom_filename}")
 
-# Optionally export the other speaker(s)
+# Export other speaker(s)
 for speaker, segment in speaker_segments.items():
     if speaker != mom_speaker:
         filename = f"{speaker}.wav"
