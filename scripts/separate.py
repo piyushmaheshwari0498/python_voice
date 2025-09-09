@@ -3,10 +3,9 @@ from pyannote.audio import Pipeline
 from pydub import AudioSegment
 
 # Load HF token from environment variable
-hf_token = os.environ.get("HF_TOKEN")  # This reads the token from env
 pipeline = Pipeline.from_pretrained(
     "pyannote/speaker-diarization",
-    use_auth_token=hf_token
+    use_auth_token=os.environ.get("HF_TOKEN")
 )
 
 audio_file = "conversation_fixed.wav"
