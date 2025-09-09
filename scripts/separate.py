@@ -1,51 +1,81 @@
-import sys
 import os
-from pyannote.audio import Pipeline
 from pydub import AudioSegment
+from pyannote.audio import Pipeline
+from pyannote.audio.pipelines.speaker_verification import PretrainedSpeakerEmbedding
+import torch
+import soundfile as sf
+import numpy as np
 
-# Get audio file from argument
-if len(sys.argv) < 2:
-    print("Please provide an input audio file as argument")
-    sys.exit(1)
+# ----------------------------
+# 1. Load diarization pipeline
+# ----------------------------
+pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization")
 
-audio_file = sys.argv[1]
-
-# Load HF token from environment variable
-pipeline = Pipeline.from_pretrained(
-    "pyannote/speaker-diarization",
-    use_auth_token=os.environ.get("HF_TOKEN")
+# ----------------------------
+# 2. Speaker embedding model
+# ----------------------------
+embedding_model = PretrainedSpeakerEmbedding(
+    "speechbrain/spkrec-ecapa-voxceleb", device="cpu"
 )
 
-print("Running speaker diarization, please wait...")
-diarization = pipeline(audio_file)
-print("Diarization completed!")
+# ----------------------------
+# 3. Function: get embedding
+# ----------------------------
+def get_embedding(wav_file):
+    waveform, sample_rate = sf.read(wav_file)
+    if waveform.ndim > 1:  # stereo → mono
+        waveform = np.mean(waveform, axis=1)
+    waveform = torch.tensor(waveform).unsqueeze(0)
+    return embedding_model({"waveform": waveform, "sample_rate": sample_rate})
 
-audio = AudioSegment.from_wav(audio_file)
 
-# Separate speakers
-speaker_segments = {}
+# ----------------------------
+# 4. Process conversation audio
+# ----------------------------
+conversation_file = "scripts/conversation_fixed.wav"
+mom_reference_file = "scripts/mom.wav"
+
+# diarize the conversation
+diarization = pipeline(conversation_file)
+
+# Load audio
+audio = AudioSegment.from_wav(conversation_file)
+
+# Get mom's reference embedding
+mom_embedding = get_embedding(mom_reference_file)
+
+# ----------------------------
+# 5. Extract only mom’s segments
+# ----------------------------
+threshold = 0.7  # similarity threshold (tune this if needed)
+mom_audio = AudioSegment.empty()
+
 for turn, _, speaker in diarization.itertracks(yield_label=True):
-    segment = audio[int(turn.start * 1000): int(turn.end * 1000)]
-    if speaker not in speaker_segments:
-        speaker_segments[speaker] = segment
+    start = int(turn.start * 1000)
+    end = int(turn.end * 1000)
+    segment = audio[start:end]
+
+    # Save temporary file for embedding
+    segment_file = "temp_segment.wav"
+    segment.export(segment_file, format="wav")
+
+    seg_embedding = get_embedding(segment_file)
+
+    # Cosine similarity between mom and this segment
+    similarity = torch.nn.functional.cosine_similarity(
+        mom_embedding, seg_embedding
+    ).item()
+
+    if similarity >= threshold:
+        print(f"✅ Keeping segment {start/1000:.2f}-{end/1000:.2f}s (similarity={similarity:.2f})")
+        mom_audio += segment
     else:
-        speaker_segments[speaker] += segment
+        print(f"❌ Skipping segment {start/1000:.2f}-{end/1000:.2f}s (similarity={similarity:.2f})")
 
-# Create output folder
-output_dir = "output"
-os.makedirs(output_dir, exist_ok=True)
+# ----------------------------
+# 6. Save final mom-only audio
+# ----------------------------
+output_file = "scripts/mom_only.wav"
+mom_audio.export(output_file, format="wav")
 
-# Identify "mom" as the speaker with the longest total duration
-mom_speaker = max(speaker_segments, key=lambda s: len(speaker_segments[s]))
-mom_filename = os.path.join(output_dir, "mom.wav")
-speaker_segments[mom_speaker].export(mom_filename, format="wav")
-print(f"Saved mom's voice as {mom_filename}")
-
-# Export other speakers
-for speaker, segment in speaker_segments.items():
-    if speaker != mom_speaker:
-        filename = os.path.join(output_dir, f"{speaker}.wav")
-        segment.export(filename, format="wav")
-        print(f"Saved {filename}")
-
-print("All done!")
+print(f"\n🎉 Saved mom's clean audio as {output_file}")
