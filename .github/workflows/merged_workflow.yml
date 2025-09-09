@@ -1,4 +1,4 @@
-name: Run Speaker Separation
+name: Speaker Separation & Diarization
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
         default: 'conversation_fixed.wav'
 
 jobs:
-  separate-job:
+  separation-diarization-job:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,22 +28,23 @@ jobs:
         run: python -m pip install --upgrade pip
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-
-      - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        run: pip install -r requirements.txt
 
       - name: Run speaker separation
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          python scripts/separate.py ${{ github.event.inputs.audio_file }}
+          echo "Running speaker separation..."
+          python scripts/separate.py "${{ github.event.inputs.audio_file }}"
 
-      - name: Upload output audio files
+      - name: Upload separated audio files
         uses: actions/upload-artifact@v4
         with:
           name: separated-audio
           path: |
             mom.wav
             *.wav
+
+      - name: Diarization summary (optional)
+        run: |
+          echo "Diarization and separation completed for file: ${{ github.event.inputs.audio_file }}"
