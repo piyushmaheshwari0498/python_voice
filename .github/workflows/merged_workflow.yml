@@ -1,18 +1,13 @@
-name: Speaker Separation & Diarization
+name: Run Speaker Separation
 
 on:
   push:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      audio_file:
-        description: 'Input audio file name in repo'
-        required: true
-        default: 'conversation_fixed.wav'
 
 jobs:
-  speaker-separation:
+  separate-job:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,15 +23,13 @@ jobs:
         run: python -m pip install --upgrade pip
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Run speaker separation
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}   # Hugging Face token
         run: |
-          echo "Running speaker separation..."
-          python scripts/separate.py "${{ github.event.inputs.audio_file }}"
+          python scripts/separate.py scripts/conversation_fixed.wav
 
       - name: Upload output audio files
         uses: actions/upload-artifact@v4
