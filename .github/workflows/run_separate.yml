@@ -24,7 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pyannote.audio==2.1.1 pydub torch==1.12.1 torchaudio==0.12.1 torchvision==0.13.1
+          pip install "numpy<2" pyannote.audio==2.1.1 pydub torch==1.12.1 torchaudio==0.12.1 torchvision==0.13.1 soundfile
 
       - name: Run speaker separation
         env:
@@ -37,5 +37,5 @@ jobs:
         with:
           name: separated-audio
           path: |
-            mom.wav
-            *.wav  # uploads other speaker files too
+	    mom.wav
+            *.wav  # uploads mom.wav and other speaker files
