@@ -19,24 +19,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Python 3.9
+      - name: Set up Python 3.11
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
-
-      - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+          python-version: '3.11'
 
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
 
       - name: Run speaker separation
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}   # Hugging Face token
-        run: python scripts/separate.py ${{ github.event.inputs.audio_file }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python scripts/separate.py ${{ github.event.inputs.audio_file }}
 
       - name: Upload output audio files
         uses: actions/upload-artifact@v4
